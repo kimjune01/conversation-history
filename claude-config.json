@@ -1,0 +1,18 @@
+{
+    "mcpServers": {
+      "conversation_history": {
+        "command": "uv",
+        "args": [
+          "--directory",
+          "/Users/junekim/Documents/conversation_history",
+          "run",
+          "server.py"
+        ],
+        "env": {
+          "CHROMA_CLIENT_TYPE": "persistent",
+          "CHROMA_DATA_DIR": "./chroma_data"
+        }
+      }
+    }
+  }
+  
