@@ -74,30 +74,19 @@ def create_parser():
 
 
 def get_chroma_client(args=None):
-    """Get or create the global Chroma client instance."""
+    """Get or create the global Chroma client instance. Always returns a persistent client."""
     global _chroma_client
     if _chroma_client is None:
         if args is None:
-            # Create parser and parse args if not provided
             parser = create_parser()
             args = parser.parse_args()
-        # Load environment variables from .env file if it exists
         load_dotenv(dotenv_path=args.dotenv_path)
-        if args.client_type == "ephemeral":
-            # Use EphemeralClient as per ChromaDB documentation
-            _chroma_client = chromadb.EphemeralClient(
-                settings=Settings(),
-                tenant=DEFAULT_TENANT,
-                database=DEFAULT_DATABASE,
+        data_dir = args.data_dir or os.getenv("CHROMA_DATA_DIR")
+        if not data_dir:
+            raise ValueError(
+                "Data directory must be provided via --data-dir flag or CHROMA_DATA_DIR environment variable."
             )
-        elif args.client_type == "persistent":
-            if not args.data_dir:
-                raise ValueError(
-                    "Data directory must be provided via --data-dir flag when using persistent client"
-                )
-            _chroma_client = chromadb.PersistentClient(path=args.data_dir)
-        else:
-            raise ValueError(f"Unsupported client type: {args.client_type}")
+        _chroma_client = chromadb.PersistentClient(path=data_dir)
     return _chroma_client
 
 
@@ -125,6 +114,10 @@ def _validate_iso8601(val, name):
         datetime.datetime.fromisoformat(val.replace("Z", "+00:00"))
     except Exception:
         raise ValueError(f"{name} must be a valid ISO 8601 date string.")
+
+
+def is_persistent_client(client) -> bool:
+    return client.__class__.__name__ == "PersistentClient"
 
 
 ##### Query and Listing Tools #####
@@ -226,8 +219,13 @@ async def query_conversation_history(
 
 @mcp.tool()
 async def health_check() -> dict:
-    """Check if the server can import chromadb and connect to the database. Useful for monitoring and debugging deployments. Also performs a round-trip test: add, retrieve, and delete a test document in a test collection."""
-    result = {"chromadb_imported": False, "db_connection": False, "round_trip": False}
+    """Check if the server can import chromadb and connect to the database. Useful for monitoring and debugging deployments. Also performs a round-trip test: add, retrieve, and delete a test document in a test collection. Ensures the client is persistent."""
+    result = {
+        "chromadb_imported": False,
+        "db_connection": False,
+        "round_trip": False,
+        "persistent_client": False,
+    }
     try:
         import chromadb
 
@@ -238,6 +236,13 @@ async def health_check() -> dict:
         return result
     try:
         client = get_chroma_client()
+        # Check if client is persistent
+        if client.__class__.__name__ == "PersistentClient":
+            result["persistent_client"] = True
+        else:
+            result["persistent_client"] = False
+            result["persistent_client_error"] = "Chroma client is not persistent."
+            return result
         client.list_collections(limit=1)
         result["db_connection"] = True
     except Exception as e:
@@ -279,7 +284,6 @@ async def remember_this_conversation(
     """Remember current conversation by storing it in the database so that it can be retrieved later.
 
     Args:
-        mcp_client_name: Name of the MCP Client. e.g. "claude-desktop"
         conversation_content: Content of the conversation, either summarized or raw.
 
     Example queries that should trigger this tool:
@@ -342,7 +346,6 @@ def _sort_and_limit_docs(docs: dict, n_results: int) -> dict:
 
 @mcp.tool()
 async def recall_recent_conversations(
-    mcp_client_name: str,
     n_results: int = 1,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
@@ -350,7 +353,6 @@ async def recall_recent_conversations(
     """Recall recent browser history and chats by retrieving them from the database.
 
     Args:
-        mcp_client_name: Name of the MCP Client. e.g. "claude-desktop"
         n_results: Number of recent conversations to recall.
         start_time: (Optional) Only recall conversations after this ISO 8601 time.
         end_time: (Optional) Only recall conversations before this ISO 8601 time.
@@ -362,9 +364,9 @@ async def recall_recent_conversations(
     """
     client = get_chroma_client()
     try:
-        collection = client.get_collection(mcp_client_name)
+        collection = client.get_collection("conversation_history")
         if not collection:
-            return {"error": f"No memory found for '{mcp_client_name}'"}
+            return {"error": f"No memory found for 'conversation_history'"}
         now = datetime.datetime.now(datetime.timezone.utc)
         # If time range is specified, use it
         if start_time or end_time:
@@ -411,7 +413,7 @@ async def recall_recent_conversations(
         )
     except Exception as e:
         return {
-            "error": f"Failed to recall recent conversations from memory '{mcp_client_name}': {str(e)}"
+            "error": f"Failed to recall recent conversations from conversation history: {str(e)}"
         }
 
 

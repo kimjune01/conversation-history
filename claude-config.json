@@ -4,14 +4,12 @@
         "command": "uv",
         "args": [
           "--directory",
-          "/Users/junekim/Documents/conversation_history",
+          "/THIS_REPO_PATH/conversation_history",
           "run",
-          "server.py"
-        ],
-        "env": {
-          "CHROMA_CLIENT_TYPE": "persistent",
-          "CHROMA_DATA_DIR": "./chroma_data"
-        }
+          "server.py",
+          "--data-dir",
+          "/THIS_REPO_PATH/conversation_history/chroma_data"
+        ]
       }
     }
   }
