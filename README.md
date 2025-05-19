@@ -1,6 +1,14 @@
-# Chroma DB Query Tool
+# Conversation History
 
-A specialized client for [Chroma DB](https://www.trychroma.com/) designed to help remember and manage conversations with an MCP (Multi-Channel Platform) client. This tool makes it easy to query, explore, and filter conversation history stored in your local Chroma DB instance, especially when used alongside the companion browser scraper repository.
+### Remember your conversation
+
+![remember](https://github.com/user-attachments/assets/9b199f61-2eeb-4a54-a86d-03907f002a05)
+
+### Recall your conversation (persistent)
+
+![recall](https://github.com/user-attachments/assets/29c80d05-ebd8-4fcb-931d-5634e0d65a2d)
+
+A specialized client using [Chroma DB](https://www.trychroma.com/) designed to help remember and manage conversations with an MCP (Multi-Channel Platform) client. This tool makes it easy to query, explore, and filter conversation history stored in your local Chroma DB instance, especially when used alongside the companion browser scraper repository.
 
 ---
 
@@ -15,66 +23,33 @@ A specialized client for [Chroma DB](https://www.trychroma.com/) designed to hel
 
 ## Setup
 
-1. **Install dependencies:**
+1. Download the repo, run `uv sync`
+2. Copy paste the contents of `claude-config.json` and set data dir to whereever.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+```
+"conversation_history": {
+        "command": "uv",
+        "args": [
+          "--directory",
+          "/THIS_REPO_PATH",
+          "run",
+          "server.py",
+          "--data-dir",
+          "/THIS_REPO_PATH/chroma_data"
+        ]
+}
+```
 
-2. **Ensure your Chroma DB is running locally and populated with data from the browser scraper.**
-
----
-
-## Usage
-
-1. **Start the query tool:**
-
-   ```bash
-   python main.py
-   ```
-
-   _(Replace `main.py` with your entry point if different)_
-
-2. **Query collections:**
-
-   - List available collections
-   - Search or filter data by your desired criteria
-
-3. **Example query:**
-
-   ```python
-   # Example Python code to query a collection
-   from chromadb import Client
-
-   client = Client()
-   collection = client.get_collection("your_collection_name")
-   results = collection.query("your search term")
-   print(results)
-   ```
-
----
-
-## Data Source
-
-- Data is provided by a separate browser scraper repository.
-- Make sure to run the scraper and ingest data into your local Chroma DB before querying.
-
----
-
-## Contributing
-
-Contributions are welcome! Please open issues or submit pull requests for improvements.
+3. same config should also work in any other mcp client.
 
 ---
 
 ## License
 
-[MIT License](LICENSE)  
-_(Or specify your license)_
+[MIT License](LICENSE)
 
 ---
 
 ## Acknowledgements
 
 - [Chroma DB](https://www.trychroma.com/)
-- The browser scraper project for data ingestion
